@@ -31,6 +31,7 @@ export async function createCase(data) {
             },
         })
         revalidatePath('/dashboard')
+        revalidatePath('/dashboard/cases')
         return { success: true, case: newCase }
     } catch (error) {
         console.error("Create Case Error:", error)
@@ -59,6 +60,45 @@ export async function updateCaseStatus(id, status) {
         revalidatePath('/dashboard')
         return { success: true }
     } catch (error) {
+        return { error: error.message }
+    }
+}
+
+export async function updateCase(id, data) {
+    const { title, description, status, clients } = data
+
+    try {
+        // Update case details
+        await prisma.case.update({
+            where: { id: parseInt(id) },
+            data: { title, description, ...(status ? { status } : {}) },
+        })
+
+        // Replace all case clients: delete existing, create new
+        await prisma.client.deleteMany({
+            where: { caseId: parseInt(id) },
+        })
+
+        if (clients && clients.length > 0) {
+            await prisma.client.createMany({
+                data: clients.map(client => ({
+                    caseId: parseInt(id),
+                    firstName: client.firstName,
+                    middleName: client.middleName || '',
+                    lastName: client.lastName,
+                    address: client.address,
+                    phone: client.phone,
+                    dob: new Date(client.dob),
+                    aadhar: client.aadhar || '',
+                })),
+            })
+        }
+
+        revalidatePath('/dashboard')
+        revalidatePath('/dashboard/cases')
+        return { success: true }
+    } catch (error) {
+        console.error("Update Case Error:", error)
         return { error: error.message }
     }
 }

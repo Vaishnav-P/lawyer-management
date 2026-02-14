@@ -1,14 +1,12 @@
 import { getCases } from '@/actions/cases'
-import DashboardClient from '@/components/dashboard-client'
+import CasesListClient from '@/components/cases-list-client'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage(props) {
+export default async function CasesPage(props) {
     const searchParams = await props.searchParams
     const query = searchParams?.query || ''
     const cases = await getCases(query)
 
-    return (
-        <DashboardClient initialCases={cases} />
-    )
+    return <CasesListClient initialCases={cases} />
 }

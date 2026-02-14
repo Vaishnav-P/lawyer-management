@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { createCase } from '@/actions/cases'
+import { createCase, updateCase } from '@/actions/cases'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,28 +35,52 @@ const clientSchema = z.object({
 const caseFormSchema = z.object({
     title: z.string().min(2, 'Case Title is required'),
     description: z.string().min(5, 'Description is required'),
+    status: z.string().optional(),
     clients: z.array(clientSchema).min(1, 'At least one client is required'),
 })
 
-export function CaseForm({ onSuccess }) {
+// Helper to format ISO date to YYYY-MM-DD for input[type="date"]
+function formatDateForInput(dateStr) {
+    if (!dateStr) return ''
+    try {
+        const d = new Date(dateStr)
+        return d.toISOString().split('T')[0]
+    } catch {
+        return ''
+    }
+}
+
+export function CaseForm({ onSuccess, initialData }) {
     const [isLoading, setIsLoading] = useState(false)
+    const isEditing = !!initialData
 
     const form = useForm({
         resolver: zodResolver(caseFormSchema),
         defaultValues: {
-            title: '',
-            description: '',
-            clients: [
-                {
-                    firstName: '',
-                    middleName: '',
-                    lastName: '',
-                    address: '',
-                    phone: '',
-                    dob: '',
-                    aadhar: '',
-                },
-            ],
+            title: initialData?.title || '',
+            description: initialData?.description || '',
+            status: initialData?.status || 'open',
+            clients: initialData?.caseClients?.length > 0
+                ? initialData.caseClients.map(c => ({
+                    firstName: c.firstName || '',
+                    middleName: c.middleName || '',
+                    lastName: c.lastName || '',
+                    address: c.address || '',
+                    phone: c.phone || '',
+                    dob: formatDateForInput(c.dob),
+                    aadhar: c.aadhar || '',
+                }))
+                : [
+                    {
+                        firstName: '',
+                        middleName: '',
+                        lastName: '',
+                        address: '',
+                        phone: '',
+                        dob: '',
+                        aadhar: '',
+                    },
+                ],
         },
     })
 
@@ -67,23 +91,32 @@ export function CaseForm({ onSuccess }) {
 
     async function onSubmit(values) {
         setIsLoading(true)
-        // Prepare data for server action
-        const payload = {
-            ...values,
-            clientId: '1', // Hardcoded system user ID for now
-        }
 
         try {
-            const result = await createCase(payload)
-            if (result.error) {
-                toast.error(result.error)
+            if (isEditing) {
+                const result = await updateCase(initialData.id, values)
+                if (result.error) {
+                    toast.error(result.error)
+                } else {
+                    toast.success('Case updated successfully')
+                    if (onSuccess) onSuccess()
+                }
             } else {
-                toast.success('Case and Clients created successfully')
-                form.reset()
-                if (onSuccess) onSuccess()
+                const payload = {
+                    ...values,
+                    clientId: '1', // Hardcoded system user ID for now
+                }
+                const result = await createCase(payload)
+                if (result.error) {
+                    toast.error(result.error)
+                } else {
+                    toast.success('Case and Clients created successfully')
+                    form.reset()
+                    if (onSuccess) onSuccess()
+                }
             }
         } catch (error) {
-            toast.error('Failed to create case')
+            toast.error(isEditing ? 'Failed to update case' : 'Failed to create case')
         } finally {
             setIsLoading(false)
         }
@@ -124,6 +157,28 @@ export function CaseForm({ onSuccess }) {
                             </FormItem>
                         )}
                     />
+                    {isEditing && (
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <FormControl>
+                                        <select
+                                            {...field}
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        >
+                                            <option value="open">Open</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="closed">Closed</option>
+                                        </select>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
                 </div>
 
                 {/* Client Details Section */}
@@ -264,7 +319,10 @@ export function CaseForm({ onSuccess }) {
 
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
-                        {isLoading ? 'Creating Case...' : 'Create Case'}
+                        {isLoading
+                            ? (isEditing ? 'Updating Case...' : 'Creating Case...')
+                            : (isEditing ? 'Update Case' : 'Create Case')
+                        }
                     </Button>
                 </div>
             </form>
