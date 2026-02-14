@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
@@ -18,10 +19,12 @@ import { Badge } from '@/components/ui/badge'
 import { deleteCase, updateCaseStatus } from '@/actions/cases'
 import { toast } from 'sonner'
 import { CaseForm } from '@/components/case-form'
-import { Plus, Trash2, Clock, CheckCircle, Users } from 'lucide-react'
+import { Plus, Trash2, Clock, CheckCircle, Users, Search } from 'lucide-react'
 
 export default function DashboardClient({ initialCases }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
     const [open, setOpen] = useState(false)
     // We can rely on router.refresh() to update data, initialCases is just for initial load
     // but to be reactive without full page reload feels, we might want to sync state.
@@ -68,6 +71,16 @@ export default function DashboardClient({ initialCases }) {
         }
     }
 
+    function handleSearch(term) {
+        const params = new URLSearchParams(searchParams)
+        if (term) {
+            params.set('query', term)
+        } else {
+            params.delete('query')
+        }
+        router.replace(`${pathname}?${params.toString()}`)
+    }
+
     return (
         <div className="flex flex-col min-h-screen">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
@@ -87,6 +100,19 @@ export default function DashboardClient({ initialCases }) {
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
                         <p className="text-muted-foreground mt-1">Manage your cases and clients</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="relative flex-1 max-w-sm">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search cases..."
+                            className="pl-8 bg-card"
+                            onChange={(e) => handleSearch(e.target.value)}
+                            defaultValue={searchParams.get('query')?.toString()}
+                        />
                     </div>
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>

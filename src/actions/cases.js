@@ -65,16 +65,39 @@ export async function updateCaseStatus(id, status) {
 
 // ... other actions if needed
 
-export async function getCases() {
-    const cases = await prisma.case.findMany({
-        include: {
-            client: true, // System user
-            caseClients: true, // Detailed clients
-            lawyer: true,
-        },
-        orderBy: {
-            createdAt: 'desc',
-        }
-    })
-    return cases
+export async function getCases(query = '') {
+    const where = query ? {
+        OR: [
+            { title: { contains: query } },
+            { description: { contains: query } },
+            {
+                caseClients: {
+                    some: {
+                        OR: [
+                            { firstName: { contains: query } },
+                            { lastName: { contains: query } }
+                        ]
+                    }
+                }
+            }
+        ]
+    } : {}
+
+    try {
+        const cases = await prisma.case.findMany({
+            where,
+            include: {
+                client: true, // System user
+                caseClients: true, // Detailed clients
+                lawyer: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            }
+        })
+        return cases
+    } catch (error) {
+        console.error("Get Cases Error:", error)
+        return []
+    }
 }
