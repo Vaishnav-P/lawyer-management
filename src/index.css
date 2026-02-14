@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  /* User Palette: 320D6D (Deep Purple), F4F7F5 (Mint White), 627C85 (Slate Blue), 0F110C (Black), 3A015C (Dark Purple) */
+
+  /* Light Mode */
+  --primary: #0F110C;
+  /* Black */
+  --secondary: #627C85;
+  /* Slate Blue */
+  --accent: #320D6D;
+  /* Deep Purple */
+  --background: #F4F7F5;
+  /* Mint White */
+  --surface: #ffffff;
+  --surface-highlight: #E2E8F0;
+}
+
+.dark {
+  /* Dark Mode */
+  --primary: #F4F7F5;
+  /* Mint White */
+  --secondary: #94a3b8;
+  /* Lighter Slate for contrast */
+  --accent: #aea2e8;
+  /* Lighter Purple for dark mode visibility */
+  --background: #0F110C;
+  /* Black */
+  --surface: #3A015C;
+  /* Dark Purple */
+  --surface-highlight: #320D6D;
+  /* Deep Purple */
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-highlight: var(--surface-highlight);
+
+  --font-sans: Inter, sans-serif;
+
+  --animate-blob: blob 7s infinite;
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 text-white font-semibold rounded-lg shadow-md hover:opacity-90 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent/50;
+    background-color: var(--accent);
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 font-semibold rounded-lg border shadow-sm transition-all duration-300 focus:outline-none focus:ring-2;
+    background-color: var(--surface);
+    color: var(--secondary);
+    border-color: var(--secondary);
+  }
+
+  .dark .btn-secondary {
+    border-color: var(--secondary);
+    color: var(--primary);
+  }
+
+  .feature-card {
+    @apply p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-slate-100 dark:border-slate-800 flex flex-col items-start;
+    background-color: var(--surface);
+  }
+
+  .nav-link {
+    @apply font-medium transition-colors;
+    color: var(--secondary);
+  }
+
+  .nav-link:hover {
+    color: var(--accent);
+  }
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+    background-color: var(--background);
+    color: var(--primary);
+    font-family: var(--font-sans);
+  }
+}
