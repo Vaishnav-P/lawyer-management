@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("client") // "client" or "lawyer"
+  createdAt DateTime @default(now())
+  
+  // Relations
+  casesAsClient Case[] @relation("ClientCases")
+  casesAsLawyer Case[] @relation("LawyerCases")
+}
+
+model Case {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  status      String   @default("open") // "open", "in_progress", "closed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // System User Relations
+  clientId    Int
+  client      User     @relation("ClientCases", fields: [clientId], references: [id])
+  
+  lawyerId    Int?
+  lawyer      User?    @relation("LawyerCases", fields: [lawyerId], references: [id])
+  
+  // Detailed Case Clients
+  caseClients Client[]
+}
+
+model Client {
+  id          Int      @id @default(autoincrement())
+  firstName   String
+  middleName  String?
+  lastName    String
+  address     String
+  phone       String
+  dob         DateTime
+  aadhar      String?
+  
+  caseId      Int
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
