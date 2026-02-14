@@ -27,7 +27,6 @@ const formSchema = z.object({
 
 export default function LoginPage() {
     const router = useRouter()
-    const [userType, setUserType] = useState('client')
     const [isLoading, setIsLoading] = useState(false)
 
     const form = useForm({
@@ -79,26 +78,6 @@ export default function LoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {/* User Type Toggle */}
-                    <div className="flex p-1 bg-muted rounded-lg mb-6 relative">
-                        <div
-                            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-background rounded-md shadow-sm transition-all duration-300 ease-in-out ${userType === 'lawyer' ? 'left-[calc(50%+2px)]' : 'left-1'}`}
-                        ></div>
-                        <button
-                            onClick={() => setUserType('client')}
-                            className={`flex-1 relative z-10 py-1.5 text-sm font-medium transition-colors duration-300 ${userType === 'client' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                            type="button"
-                        >
-                            Client
-                        </button>
-                        <button
-                            onClick={() => setUserType('lawyer')}
-                            className={`flex-1 relative z-10 py-1.5 text-sm font-medium transition-colors duration-300 ${userType === 'lawyer' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                            type="button"
-                        >
-                            Lawyer
-                        </button>
-                    </div>
 
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
