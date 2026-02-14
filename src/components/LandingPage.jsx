@@ -198,6 +198,7 @@ const LandingPage = () => {
                                 <li><a href="#" className="hover:text-accent">Features</a></li>
                                 <li><a href="#" className="hover:text-accent">Pricing</a></li>
                                 <li><a href="#" className="hover:text-accent">Security</a></li>
+                                <li><Link to="/admin" className="hover:text-accent">Admin Demo</Link></li>
                             </ul>
                         </div>
                         <div>
