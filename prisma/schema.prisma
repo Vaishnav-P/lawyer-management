@@ -37,6 +37,17 @@ model Case {
   
   // Detailed Case Clients
   caseClients Client[]
+  documents   Document[]
+}
+
+model Document {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String   // This could just be a path for local storage for this demo
+  type      String   // MIME type or description
+  caseId    Int
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Client {
