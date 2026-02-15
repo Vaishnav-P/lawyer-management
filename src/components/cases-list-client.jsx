@@ -28,17 +28,82 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, MoreHorizontal, Pencil } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Search, MoreHorizontal, Pencil, ChevronLeft, ChevronRight, Filter, X, Eye } from "lucide-react"
 import { updateCaseStatus, deleteCase } from '@/actions/cases'
 import { toast } from 'sonner'
 import { CaseForm } from '@/components/case-form'
+import { CaseDetailsDialog } from '@/components/case-details-dialog'
+import { useEffect } from "react"
 
-export default function CasesListClient({ initialCases }) {
+export default function CasesListClient({ initialCases, totalPages = 1, currentPage = 1 }) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const [editCase, setEditCase] = useState(null)
+    const [viewCase, setViewCase] = useState(null)
     const [isEditOpen, setIsEditOpen] = useState(false)
+    const [isViewOpen, setIsViewOpen] = useState(false)
+    const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [filterValues, setFilterValues] = useState({
+        caseId: '',
+        date: '',
+        clientFirstName: '',
+        clientLastName: '',
+        aadhar: '',
+        phone: '',
+        status: 'all'
+    })
+
+    useEffect(() => {
+        setFilterValues({
+            caseId: searchParams.get('caseId') || '',
+            date: searchParams.get('date') || '',
+            clientFirstName: searchParams.get('clientFirstName') || '',
+            clientLastName: searchParams.get('clientLastName') || '',
+            aadhar: searchParams.get('aadhar') || '',
+            phone: searchParams.get('phone') || '',
+            status: searchParams.get('status') || 'all'
+        })
+    }, [searchParams])
+
+    const handleFilterChange = (key, value) => {
+        setFilterValues(prev => ({ ...prev, [key]: value }))
+    }
+
+    const applyFilters = () => {
+        const params = new URLSearchParams(searchParams)
+        // Reset to page 1
+        params.set('page', '1')
+
+        Object.entries(filterValues).forEach(([key, value]) => {
+            if (value) params.set(key, value)
+            else params.delete(key)
+        })
+
+        router.push(`${pathname}?${params.toString()}`)
+        setIsFilterOpen(false)
+    }
+
+    const clearFilters = () => {
+        const params = new URLSearchParams(searchParams)
+        const relevantKeys = ['caseId', 'date', 'clientFirstName', 'clientLastName', 'aadhar', 'phone', 'status']
+        relevantKeys.forEach(key => params.delete(key))
+        params.set('page', '1')
+
+        setFilterValues({
+            caseId: '',
+            date: '',
+            clientFirstName: '',
+            clientLastName: '',
+            aadhar: '',
+            phone: '',
+            status: 'all'
+        })
+
+        router.push(`${pathname}?${params.toString()}`)
+        setIsFilterOpen(false)
+    }
 
     const handleSearch = (term) => {
         const params = new URLSearchParams(searchParams)
@@ -48,6 +113,12 @@ export default function CasesListClient({ initialCases }) {
             params.delete('query')
         }
         router.replace(`${pathname}?${params.toString()}`)
+    }
+
+    function handlePageChange(page) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', page)
+        router.push(`${pathname}?${params.toString()}`)
     }
 
     async function handleStatusUpdate(id, status) {
@@ -77,6 +148,11 @@ export default function CasesListClient({ initialCases }) {
         } catch (error) {
             toast.error('Failed to delete')
         }
+    }
+
+    function handleView(caseItem) {
+        setViewCase(caseItem)
+        setIsViewOpen(true)
     }
 
     function handleEdit(caseItem) {
@@ -112,6 +188,14 @@ export default function CasesListClient({ initialCases }) {
                             defaultValue={searchParams.get('query')?.toString()}
                         />
                     </div>
+                    <Button variant="outline" size="icon" onClick={() => setIsFilterOpen(true)} title="Advanced Filters">
+                        <Filter className="h-4 w-4" />
+                    </Button>
+                    {(searchParams.get('caseId') || searchParams.get('date') || searchParams.get('clientFirstName') || searchParams.get('clientLastName') || searchParams.get('aadhar') || searchParams.get('phone') || (searchParams.get('status') && searchParams.get('status') !== 'all')) && (
+                        <Button variant="outline" size="icon" onClick={clearFilters} title="Clear Filters">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -164,7 +248,7 @@ export default function CasesListClient({ initialCases }) {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {new Date(caseItem.createdAt).toLocaleDateString()}
+                                        {new Date(caseItem.createdAt).toLocaleDateString('en-GB')}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
@@ -176,6 +260,10 @@ export default function CasesListClient({ initialCases }) {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handleView(caseItem)}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    View Details
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleEdit(caseItem)}>
                                                     <Pencil className="mr-2 h-4 w-4" />
                                                     Edit Case
@@ -204,6 +292,37 @@ export default function CasesListClient({ initialCases }) {
                 </Table>
             </div>
 
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage <= 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= totalPages}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+
+            {/* View Case Dialog */}
+            <CaseDetailsDialog
+                open={isViewOpen}
+                onOpenChange={setIsViewOpen}
+                caseItem={viewCase}
+            />
+
             {/* Edit Case Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -220,6 +339,97 @@ export default function CasesListClient({ initialCases }) {
                             onSuccess={handleEditSuccess}
                         />
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Filter Dialog */}
+            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Advanced Search</DialogTitle>
+                        <DialogDescription>Filter cases by specific criteria.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="caseId" className="text-right">Case ID</Label>
+                            <Input
+                                id="caseId"
+                                value={filterValues.caseId}
+                                onChange={(e) => handleFilterChange('caseId', e.target.value)}
+                                className="col-span-3"
+                                type="number"
+                                placeholder="E.g. 101"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="date" className="text-right">Created Date</Label>
+                            <Input
+                                id="date"
+                                value={filterValues.date}
+                                onChange={(e) => handleFilterChange('date', e.target.value)}
+                                className="col-span-3"
+                                type="date"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="clientFirstName" className="text-right">First Name</Label>
+                            <Input
+                                id="clientFirstName"
+                                value={filterValues.clientFirstName}
+                                onChange={(e) => handleFilterChange('clientFirstName', e.target.value)}
+                                className="col-span-3"
+                                placeholder="First name"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="clientLastName" className="text-right">Last Name</Label>
+                            <Input
+                                id="clientLastName"
+                                value={filterValues.clientLastName}
+                                onChange={(e) => handleFilterChange('clientLastName', e.target.value)}
+                                className="col-span-3"
+                                placeholder="Last name"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="aadhar" className="text-right">Aadhar</Label>
+                            <Input
+                                id="aadhar"
+                                value={filterValues.aadhar}
+                                onChange={(e) => handleFilterChange('aadhar', e.target.value)}
+                                className="col-span-3"
+                                placeholder="Aadhar number"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="phone" className="text-right">Phone</Label>
+                            <Input
+                                id="phone"
+                                value={filterValues.phone}
+                                onChange={(e) => handleFilterChange('phone', e.target.value)}
+                                className="col-span-3"
+                                placeholder="Phone number"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="status" className="text-right">Status</Label>
+                            <select
+                                id="status"
+                                value={filterValues.status}
+                                onChange={(e) => handleFilterChange('status', e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 col-span-3"
+                            >
+                                <option value="all">All</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={clearFilters}>Clear Filters</Button>
+                        <Button onClick={applyFilters}>Apply Filters</Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

@@ -105,39 +105,162 @@ export async function updateCase(id, data) {
 
 // ... other actions if needed
 
-export async function getCases(query = '') {
-    const where = query ? {
-        OR: [
-            { title: { contains: query } },
-            { description: { contains: query } },
-            {
-                caseClients: {
-                    some: {
-                        OR: [
-                            { firstName: { contains: query } },
-                            { lastName: { contains: query } }
-                        ]
+export async function getCases(query = '', page = 1, pageSize = 10, filters = {}) {
+    const where = { AND: [] }
+
+    if (query) {
+        where.AND.push({
+            OR: [
+                { title: { contains: query } },
+                { description: { contains: query } },
+                {
+                    caseClients: {
+                        some: {
+                            OR: [
+                                { firstName: { contains: query } },
+                                { lastName: { contains: query } }
+                            ]
+                        }
                     }
                 }
-            }
-        ]
-    } : {}
+            ]
+        })
+    }
 
-    try {
-        const cases = await prisma.case.findMany({
-            where,
-            include: {
-                client: true, // System user
-                caseClients: true, // Detailed clients
-                lawyer: true,
-            },
-            orderBy: {
-                createdAt: 'desc',
+    if (filters.caseId) {
+        where.AND.push({ id: parseInt(filters.caseId) })
+    }
+
+    if (filters.date) {
+        try {
+            const searchDate = new Date(filters.date)
+            // Ensure valid date
+            if (!isNaN(searchDate.getTime())) {
+                const nextDay = new Date(searchDate)
+                nextDay.setDate(searchDate.getDate() + 1)
+
+                where.AND.push({
+                    createdAt: {
+                        gte: searchDate,
+                        lt: nextDay
+                    }
+                })
+            }
+        } catch (e) {
+            console.error("Invalid date filter:", filters.date)
+        }
+    }
+
+    if (filters.clientFirstName) {
+        where.AND.push({
+            caseClients: {
+                some: {
+                    firstName: { contains: filters.clientFirstName }
+                }
             }
         })
-        return cases
+    }
+
+    if (filters.clientLastName) {
+        where.AND.push({
+            caseClients: {
+                some: {
+                    lastName: { contains: filters.clientLastName }
+                }
+            }
+        })
+    }
+
+    if (filters.aadhar) {
+        where.AND.push({
+            caseClients: {
+                some: {
+                    aadhar: { contains: filters.aadhar }
+                }
+            }
+        })
+    }
+
+    if (filters.phone) {
+        where.AND.push({
+            caseClients: {
+                some: {
+                    phone: { contains: filters.phone }
+                }
+            }
+        })
+    }
+
+    if (filters.status && filters.status !== 'all') {
+        where.AND.push({ status: filters.status })
+    }
+
+    if (where.AND.length === 0) delete where.AND
+
+    try {
+        const [cases, totalCount] = await Promise.all([
+            prisma.case.findMany({
+                where,
+                include: {
+                    client: true, // System user
+                    caseClients: true, // Detailed clients
+                    lawyer: true,
+                },
+                orderBy: {
+                    createdAt: 'desc',
+                },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            }),
+            prisma.case.count({ where })
+        ])
+
+        return { cases, totalCount }
     } catch (error) {
         console.error("Get Cases Error:", error)
-        return []
+        return { cases: [], totalCount: 0 }
+    }
+}
+
+export async function addDocument(caseId, data) {
+    try {
+        const doc = await prisma.document.create({
+            data: {
+                name: data.name,
+                url: data.url,
+                type: data.type,
+                caseId: parseInt(caseId)
+            }
+        })
+        revalidatePath('/dashboard')
+        revalidatePath('/dashboard/cases')
+        return { success: true, document: doc }
+    } catch (error) {
+        console.error("Add Document Error:", error)
+        return { error: error.message }
+    }
+}
+
+export async function getCaseDocuments(caseId) {
+    try {
+        const documents = await prisma.document.findMany({
+            where: { caseId: parseInt(caseId) },
+            orderBy: { createdAt: 'desc' }
+        })
+        return { success: true, documents }
+    } catch (error) {
+        return { error: error.message }
+    }
+}
+
+export async function deleteDocument(id) {
+    try {
+        await prisma.document.delete({
+            where: { id: parseInt(id) }
+        })
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (error) {
+        return { error: error.message }
     }
 }
